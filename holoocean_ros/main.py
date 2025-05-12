@@ -17,7 +17,7 @@ cfg = {
     "agents": [
         {
             "agent_name": "auv0",
-            "agent_type": "HoveringAUV",
+            "agent_type": "BlueROV2",
             "sensors": [
                 {
                     "sensor_type": "RGBCamera",
@@ -92,12 +92,10 @@ def main():
             #send to holoocean
             env.act("auv0", command)
             state = env.tick()
-            # cv2.imshow("viewport", state['RGBCamera'])
+            cv2.imshow("viewport", state['RGBCamera'])
             # cv2.imshow("viewport", state['ViewportCapture'])
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
-
-            print(state.keys())
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
 # class MinimalNode(Node):
 #     def __init__(self):
