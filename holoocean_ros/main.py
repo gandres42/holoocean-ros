@@ -10,7 +10,7 @@ import time
 
 cfg = {
     "name": "test_rgb_camera",
-    "world": "SimpleUnderwater",
+    "world": "PierHarbor",
     "package_name": "Ocean",
     "main_agent": "auv0",
     "ticks_per_sec": 60,
@@ -32,7 +32,8 @@ cfg = {
                 }
             ],
             "control_scheme": 0,
-            "location": [0, 0, -10]
+            "location": [486.0, -632.0, -12.0],
+            "rotation": [0.0, 0.0, 135.0]
         }
     ]
 }
@@ -81,7 +82,7 @@ def parse_keys(keys, val):
     return command
 
 def main():
-    with holoocean.make(scenario_cfg=cfg, show_viewport=False, verbose=True, gl_version=3) as env:
+    with holoocean.make(scenario_cfg=cfg, show_viewport=True, verbose=True) as env:
         env.should_render_viewport(True)
         while True:
             if 'q' in pressed_keys:
@@ -92,9 +93,9 @@ def main():
             env.act("auv0", command)
             state = env.tick()
             # cv2.imshow("viewport", state['RGBCamera'])
-            cv2.imshow("viewport", state['ViewportCapture'])
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            # cv2.imshow("viewport", state['ViewportCapture'])
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
 
             print(state.keys())
 
