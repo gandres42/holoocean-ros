@@ -6,6 +6,7 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, Vector3
+from std_msgs.msg import Float64
 
 
 class KeyboardListener:
@@ -56,21 +57,21 @@ class ControlNode(Node):
         cmd_lin = Vector3()
         cmd_ang = Vector3()
         if cmd['w']:
-            cmd_lin.y = 1
+            cmd_lin.y = 10.0
         if cmd['s']:
-            cmd_lin.y = -1
+            cmd_lin.y = -10.0
         if cmd['a']:
-            cmd_lin.x = -1
+            cmd_lin.x = -10.0
         if cmd['d']:
-            cmd_lin.y = 1
+            cmd_lin.x = 10.0
         if cmd['i']:
-            cmd_lin.z = 1
+            cmd_lin.z = 10.0
         if cmd['j']:
-            cmd_lin.z = -1
+            cmd_ang.z = -10.0
         if cmd['k']:
-            cmd_ang.z = -1
-        if cmd['d']:
-            cmd_ang.z = 1
+            cmd_lin.z = -10.0
+        if cmd['l']:
+            cmd_ang.z = 10.0
         
         cmd_vel = Twist()
         cmd_vel.linear = cmd_lin

@@ -44,57 +44,62 @@ test_cfg = {
 }
 
 class AgentNode(Node):
-    def __init__(self, agent_cfg, agent_num):
-        super().__init__(f"holoocean_agent{agent_num}")
+    def __init__(self, cfg, num, env, timer_period):
+        super().__init__(f"holoocean_agent{num}")
+        
+        # save config and env
+        self.cfg = deepcopy(cfg)
+        self.env = env
+
+        # create bridge for image conversion
         self.bridge = CvBridge()
-        self.topic_root = f"/holoocean/agent{agent_num}/"
-        agent_cfg = deepcopy(agent_cfg)
 
         # create sensor topic names and publishers based
+        self.topic_root = f"/holoocean/agent{num}/"
         typecount = {}
-        for i, sensor in enumerate(agent_cfg['sensors']):
+        for i, sensor in enumerate(self.cfg['sensors']):
             if sensor['sensor_type'] not in typecount:
                 typecount[sensor['sensor_type']] = 0
             else:
                 typecount[sensor['sensor_type']] += 1
 
-            agent_cfg['sensors'][i]['topic'] = f"{sensor['sensor_type']}{typecount[sensor['sensor_type']]}"
+            self.cfg['sensors'][i]['topic'] = f"{sensor['sensor_type']}{typecount[sensor['sensor_type']]}"
             match sensor['sensor_type']:
                 case "RGBCamera":
-                    agent_cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + agent_cfg['sensors'][i]['topic'], 1)
+                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "ViewportCapture":
-                    agent_cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + agent_cfg['sensors'][i]['topic'], 1)
-
-        self.cfg = agent_cfg
+                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
         
         # subscribe to control topic
-        self.create_subscription(Twist, f"{self.topic_root}cmd_vel", self.vel_callback, 10)
-        print(f"{self.topic_root}cmd_vel")
+        self.create_subscription(Twist, f"{self.topic_root}cmd_vel", self.vel_callback, 1)
         self.get_logger().info(f'made subscriber at {self.topic_root}cmd_vel')
+
+        # create timed topic to force execution without waiting for cmd subscription
+        # self.create_timer(timer_period, self.env_act)
+        # self.command = np.zeros(8)
+
+    def env_act(self):
+        self.env.act(self.cfg['agent_name'], self.command)
 
     def vel_callback(self, msg):
         command = np.zeros(8)
-        # if 'i' in keys:
-        #     command[0:4] += val
-        # if 'k' in keys:
-        #     command[0:4] -= val
-        # if 'j' in keys:
-        #     command[[4,7]] += val
-        #     command[[5,6]] -= val
-        # if 'l' in keys:
-        #     command[[4,7]] -= val
-        #     command[[5,6]] += val
+        
+        # UP/DOWN
+        command[0:4] += msg.linear.z
 
-        # if 'w' in keys:
-        #     command[4:8] += val
-        # if 's' in keys:
-        #     command[4:8] -= val
-        # if 'a' in keys:
-        #     command[[4,6]] += val
-        #     command[[5,7]] -= val
-        # if 'd' in keys:
-        #     command[[4,6]] -= val
-        #     command[[5,7]] += val
+        # YAW
+        command[[4,7]] -= msg.angular.z
+        command[[5,6]] += msg.angular.z
+
+        # FORWARD/BACKWARD
+        command[4:8] += msg.linear.y
+
+        # STRAFE LEFT
+        command[[4,6]] -= msg.linear.x
+        command[[5,7]] += msg.linear.x
+        
+        self.command = command
+        self.env.act(self.cfg['agent_name'], self.command)
     
     def numpy_to_image(self, np_img: np.ndarray, frame_id: str = "camera") -> Image:
         msg = self.bridge.cv2_to_imgmsg(np_img)
@@ -113,17 +118,23 @@ class AgentNode(Node):
 
 
 class EnvNode(Node):
-    def __init__(self, global_cfg):
-        self.cfg = global_cfg
+    def __init__(self, cfg):
+        self.cfg = cfg
         super().__init__(f"holoocean_driver")
-        self.agents = []
-        for i, agent_cfg in enumerate(global_cfg['agents']):
-            self.agents.append(AgentNode(agent_cfg, i))
+        
+        # create sim environment
         self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=False)
-        self.create_timer(1 / global_cfg['ticks_per_sec'], self.tick)
-        self.env.should_render_viewport(True)
+        # self.env.should_render_viewport(True)
         # self.env.set_render_quality(3)
         # self.env.weather.set_fog_density(1)
+        
+        # create agent nodes
+        self.agents = []
+        for i, agent_cfg in enumerate(cfg['agents']):
+            self.agents.append(AgentNode(agent_cfg, i, self.env, 1 / cfg['ticks_per_sec']))
+        
+        # update environment at provided tick rate
+        self.create_timer(1 / cfg['ticks_per_sec'], self.tick)
 
     def tick(self):
         # one simulation tick
@@ -142,9 +153,8 @@ class EnvNode(Node):
         for i in range(len(self.agents)):
             self.agents[i].tick(state[self.cfg['agents'][i]['agent_name']])
 
-        # update agent movements
-        # command = parse_keys(pressed_keys, force)
-        # env.act("auv0", command)
+        # log tick time
+        self.get_logger().info(f"{self.get_clock().now()}")
                 
 
 def main(args=None):
@@ -154,10 +164,9 @@ def main(args=None):
         while True:
             rclpy.spin_once(node, timeout_sec=0)
             for agent in node.agents:
-                rclpy.spin_once(agent, timeout_sec=0)
+                rclpy.spin_once(agent, timeout_sec=0.05)
     except KeyboardInterrupt:
         pass
-    # rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
