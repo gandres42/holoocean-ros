@@ -13,7 +13,7 @@ import time
 
 test_cfg = {
     "name": "test_rgb_camera",
-    "world": "SimpleUnderwater",
+    "world": "PierHarbor",
     "package_name": "Ocean",
     "main_agent": "auv0",
     "ticks_per_sec": 60,
@@ -32,12 +32,12 @@ test_cfg = {
                         "CaptureHeight": 480
                     }
                 },
-                {
-                    "sensor_type": "ViewportCapture"
-                }
+                # {
+                #     "sensor_type": "ViewportCapture"
+                # }
             ],
             "control_scheme": 0,
-            # "location": [486.0, -632.0, -12.0],
+            "location": [486.0, -632.0, -12.0],
             "rotation": [0.0, 0.0, 135.0]
         },
     ]
@@ -123,10 +123,10 @@ class EnvNode(Node):
         super().__init__(f"holoocean_driver")
         
         # create sim environment
-        self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=False)
+        self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=False, verbose=False)
         # self.env.should_render_viewport(True)
-        # self.env.set_render_quality(3)
-        # self.env.weather.set_fog_density(1)
+        self.env.set_render_quality(1)
+        self.env.weather.set_fog_density(1)
         
         # create agent nodes
         self.agents = []

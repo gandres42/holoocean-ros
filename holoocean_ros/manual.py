@@ -77,11 +77,9 @@ class ControlNode(Node):
         cmd_vel.linear = cmd_lin
         cmd_vel.angular = cmd_ang
         self.cmdvel_pub.publish(cmd_vel)
-        
 
 
 def main(args=None):
-
     rclpy.init(args=args)
     node = ControlNode(0)
     rclpy.spin(node)
