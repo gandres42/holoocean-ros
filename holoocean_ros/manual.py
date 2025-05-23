@@ -6,8 +6,6 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, Vector3
-from std_msgs.msg import Float64
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 
 class KeyboardListener:
@@ -49,14 +47,8 @@ class KeyboardListener:
 class ControlNode(Node):
     def __init__(self, agent_num):
         super().__init__('holoocean_controller')
-        self.control_timer = self.create_timer(1/5, self.control_timer_callback)
-        qos = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_AVAILABLE,
-            durability=QoSDurabilityPolicy.VOLATILE,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1
-        )
-        self.cmdvel_pub = self.create_publisher(Twist, f"/holoocean/agent{agent_num}/cmd_vel", qos)
+        self.control_timer = self.create_timer(1/60, self.control_timer_callback)
+        self.cmdvel_pub = self.create_publisher(Twist, f"/holoocean/agent{agent_num}/cmd_vel", 1)
         self.listener = KeyboardListener()
 
     def control_timer_callback(self):

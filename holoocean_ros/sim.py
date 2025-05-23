@@ -33,38 +33,39 @@ test_cfg = {
                     "name": "cam0",
                     "socket": "CameraSocket",
                     "configuration": {
-                        "CaptureWidth": 720,
-                        "CaptureHeight": 480
+                        "CaptureWidth": 512,
+                        "CaptureHeight": 512
                     }
                 },
-                # {
-                #     "sensor_type": "ViewportCapture"
-                # }
+                {
+                    "sensor_type": "ViewportCapture"
+                },
                 # {
                 #     "sensor_type": "ProfilingSonar",
                 #     "socket": "SonarSocket",
-                #     "octree_min": 1,
-                #     "octree_max": 2,
-                #     # "Hz": 1,
-                #     # "configuration": {
-                #     #     "RangeBins": 512,
-                #     #     "AzimuthBins": 512,
-                #     #     "RangeMin": 1,
-                #     #     "RangeMax": 40,
-                #     #     "InitOctreeRange": 50,
-                #     #     "Elevation": 20,
-                #     #     "Azimuth": 120,
-                #     #     "AzimuthStreaks": -1,
-                #     #     "ScaleNoise": True,
-                #     #     "AddSigma": 0.15,
-                #     #     "MultSigma": 0.2,
-                #     #     "RangeSigma": 0.1,
-                #     #     "MultiPath": True
-                #     # }
+                #     "octree_min": 3,
+                #     "octree_max": 4,
+                #     "Hz": 5,
+                #     "configuration": {
+                #         "RangeBins": 256,
+                #         "AzimuthBins": 256,
+                #         "RangeMin": 1,
+                #         "RangeMax": 10,
+                #         "InitOctreeRange": 500,
+                #         "Elevation": 20,
+                #         "Azimuth": 120,
+                #         "AzimuthStreaks": -1,
+                #         "ScaleNoise": True,
+                #         "AddSigma": 0.15,
+                #         "MultSigma": 0.2,
+                #         "RangeSigma": 0.1,
+                #         "MultiPath": True
+                #     }
                 # }
             ],
             "control_scheme": 0,
             # "location": [486.0, -632.0, -12.0],
+            "location": [0, 0, -30],
             "rotation": [0.0, 0.0, 135.0]
         },
     ]
@@ -97,6 +98,8 @@ class AgentNode(Node):
                 case "ViewportCapture":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "ImagingSonar":
+                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
+                case "SinglebeamSonar":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "ProfilingSonar":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
@@ -154,6 +157,9 @@ class AgentNode(Node):
                     self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
                 case "ProfilingSonar":
                     self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
+                case "SinglebeamSonar":
+                    # self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
+                    pass
 
         with self.command_lock:
             self.env.act(self.cfg['agent_name'], self.command)
@@ -168,7 +174,7 @@ class EnvNode(Node):
         self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=True)
         # self.env.should_render_viewport(True)
         # self.env.set_render_quality(3)
-        # self.env.weather.set_fog_density(1)
+        self.env.weather.set_fog_density(0.5)
         
         # create agent nodes
         self.agents = []
