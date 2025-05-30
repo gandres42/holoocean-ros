@@ -15,6 +15,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallb
 from threading import Lock
 from rclpy.qos import QoSPresetProfiles
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
+from holoocean_msgs.msg import DVL
 
 test_cfg = {
     "name": "test_rgb_camera",
@@ -114,6 +115,8 @@ class AgentNode(Node):
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "ProfilingSonar":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
+                case "DVLSensor":
+                    self.cfg['sensors'][i]['pub'] = self.create_publisher(DVL, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
 
         # create empty base command
         self.command = np.zeros((8))
@@ -169,7 +172,16 @@ class AgentNode(Node):
                 case "ProfilingSonar":
                     self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
                 case "DVLSensor":
-                    print(val)
+                    dvl = DVL()
+                    dvl.velocity_x = float(val[0])
+                    dvl.velocity_y = float(val[1])
+                    dvl.velocity_z = float(val[2])
+                    dvl.range_x_forw = float(val[3])
+                    dvl.range_y_forw = float(val[4])
+                    dvl.range_x_back = float(val[5])
+                    dvl.range_y_back = float(val[6])
+                    print(dvl)
+                    self.cfg['sensors'][i]['pub'].publish(dvl)
 
         with self.command_lock:
             self.env.act(self.cfg['agent_name'], self.command)
