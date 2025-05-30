@@ -5,17 +5,17 @@ import holoocean
 import numpy as np
 from pynput import keyboard
 from sensor_msgs.msg import Image
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32
 from cv_bridge import CvBridge
 from copy import deepcopy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Point
 import time
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from threading import Lock
 from rclpy.qos import QoSPresetProfiles
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
-from holoocean_msgs.msg import DVL
+from holoocean_msgs.msg import DVL # type: ignore
 
 test_cfg = {
     "name": "test_rgb_camera",
@@ -38,6 +38,24 @@ test_cfg = {
                         "CaptureHeight": 512
                     }
                 },
+                {
+                    "sensor_type": "DepthSensor",
+                    "socket": "DepthSocket",
+                    "Hz": 60,
+                    "configuration": {
+                        "Sigma": 0.255
+                    }
+                },
+                # {
+                #     "sensor_type": "GPSSensor",
+                #     "socket": "IMUSocket",
+                #     "Hz": 5,
+                #     "configuration":{
+                #         "Sigma": 0.5,
+                #         "Depth": 1,
+                #         "DepthSigma": 0.25
+                #     }
+                # },
                 # {
                 #     "sensor_type": "ViewportCapture"
                 # },
@@ -63,19 +81,19 @@ test_cfg = {
                 #         "MultiPath": True
                 #     }
                 # }
-                {
-                    "sensor_type": "DVLSensor",
-                    "socket": "DVLSocket",
-                    "Hz": 20,
-                    "configuration": {
-                        "Elevation": 22.5,
-                        "DebugLines": False,
-                        "VelSigma": 0.02626,
-                        "ReturnRange": True,
-                        "MaxRange": 50,
-                        "RangeSigma": 0.1
-                    }
-                }
+                # {
+                #     "sensor_type": "DVLSensor",
+                #     "socket": "DVLSocket",
+                #     "Hz": 20,
+                #     "configuration": {
+                #         "Elevation": 22.5,
+                #         "DebugLines": False,
+                #         "VelSigma": 0.02626,
+                #         "ReturnRange": True,
+                #         "MaxRange": 50,
+                #         "RangeSigma": 0.1
+                #     }
+                # },
             ],
             "control_scheme": 0,
             # "location": [486.0, -632.0, -12.0],
@@ -117,6 +135,10 @@ class AgentNode(Node):
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "DVLSensor":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(DVL, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
+                case "GPSSensor":
+                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Point, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
+                case "DepthSensor":
+                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Float32, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
 
         # create empty base command
         self.command = np.zeros((8))
@@ -161,28 +183,38 @@ class AgentNode(Node):
     
     def tick(self, state):
         # update ros topics
+        print(state.keys())
         for i, (sensor, val) in enumerate(state.items()):
+            new_msg = None
             match sensor:
                 case "RGBCamera":
-                    self.cfg['sensors'][i]['pub'].publish(self.camera_to_image(val))
+                    new_msg = self.camera_to_image(val)
                 case "ViewportCapture":
-                    self.cfg['sensors'][i]['pub'].publish(self.camera_to_image(val))
+                    new_msg = self.camera_to_image(val)
                 case "ImagingSonar":
-                    self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
+                    new_msg = self.sonar_to_image(val)
                 case "ProfilingSonar":
-                    self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
+                    new_msg = self.sonar_to_image(val)
                 case "DVLSensor":
-                    dvl = DVL()
-                    dvl.velocity_x = float(val[0])
-                    dvl.velocity_y = float(val[1])
-                    dvl.velocity_z = float(val[2])
-                    dvl.range_x_forw = float(val[3])
-                    dvl.range_y_forw = float(val[4])
-                    dvl.range_x_back = float(val[5])
-                    dvl.range_y_back = float(val[6])
-                    print(dvl)
-                    self.cfg['sensors'][i]['pub'].publish(dvl)
-
+                    new_msg = DVL()
+                    new_msg.velocity_x = float(val[0])
+                    new_msg.velocity_y = float(val[1])
+                    new_msg.velocity_z = float(val[2])
+                    new_msg.range_x_forw = float(val[3])
+                    new_msg.range_y_forw = float(val[4])
+                    new_msg.range_x_back = float(val[5])
+                    new_msg.range_y_back = float(val[6])
+                case "GPSSensor":
+                    new_msg = Point()
+                    new_msg.x = val[0]
+                    new_msg.y = val[1]
+                    new_msg.z = val[2]
+                case "DepthSensor":
+                    new_msg = Float32()
+                    new_msg.data = float(val[0])
+                    print(val[0])
+            self.cfg['sensors'][i]['pub'].publish(new_msg)
+        
         with self.command_lock:
             self.env.act(self.cfg['agent_name'], self.command)
         
