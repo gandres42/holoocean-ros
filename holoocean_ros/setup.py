@@ -19,7 +19,8 @@ setup(
     license='TODO: License declaration',
     entry_points={
         'console_scripts': [
-            'sim = holoocean_ros.main:main',
+            'sim = holoocean_ros.sim:main',
+            'manual = holoocean_ros.manual:main',
         ],
     },
 )

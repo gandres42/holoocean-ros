@@ -1,0 +1,7 @@
+float32 velocity_x
+float32 velocity_y
+float32 velocity_z
+float32 range_x_forw
+float32 range_y_forw
+float32 range_x_back
+float32 range_y_back

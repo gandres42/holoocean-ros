@@ -37,9 +37,9 @@ test_cfg = {
                         "CaptureHeight": 512
                     }
                 },
-                {
-                    "sensor_type": "ViewportCapture"
-                },
+                # {
+                #     "sensor_type": "ViewportCapture"
+                # },
                 # {
                 #     "sensor_type": "ProfilingSonar",
                 #     "socket": "SonarSocket",
@@ -62,6 +62,19 @@ test_cfg = {
                 #         "MultiPath": True
                 #     }
                 # }
+                {
+                    "sensor_type": "DVLSensor",
+                    "socket": "DVLSocket",
+                    "Hz": 20,
+                    "configuration": {
+                        "Elevation": 22.5,
+                        "DebugLines": False,
+                        "VelSigma": 0.02626,
+                        "ReturnRange": True,
+                        "MaxRange": 50,
+                        "RangeSigma": 0.1
+                    }
+                }
             ],
             "control_scheme": 0,
             # "location": [486.0, -632.0, -12.0],
@@ -98,8 +111,6 @@ class AgentNode(Node):
                 case "ViewportCapture":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "ImagingSonar":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "SinglebeamSonar":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
                 case "ProfilingSonar":
                     self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
@@ -157,9 +168,8 @@ class AgentNode(Node):
                     self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
                 case "ProfilingSonar":
                     self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
-                case "SinglebeamSonar":
-                    # self.cfg['sensors'][i]['pub'].publish(self.sonar_to_image(val))
-                    pass
+                case "DVLSensor":
+                    print(val)
 
         with self.command_lock:
             self.env.act(self.cfg['agent_name'], self.command)
@@ -209,7 +219,7 @@ def main(args=None):
     env_node = EnvNode(test_cfg, ReentrantCallbackGroup())
 
     # add agents to shared executor
-    executor = MultiThreadedExecutor()
+    executor = MultiThreadedExecutor(num_threads=len(env_node.agents) + 1)
     for agent in env_node.agents:
         executor.add_node(agent)
 
