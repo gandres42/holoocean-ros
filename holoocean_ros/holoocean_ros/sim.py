@@ -19,56 +19,47 @@ from holoocean_msgs.msg import DVL # type: ignore
 import json
 
 # TODO
+# sensor naming rework
 # multiagent support
 # launchfiles and config options
 # migeran compatibility
 
-
+class ConfigurationError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
 
 class AgentNode(Node):
     def __init__(self, cfg, num, env, callback_group):
         super().__init__(f"holoocean_agent{num}")
         
-        # save config and env
-        self.cfg = deepcopy(cfg)
+        # instance vars
         self.env = env
-
-        # create bridge for image conversion
+        self.cfg = cfg
         self.bridge = CvBridge()
 
-        # create sensor topic names and publishers based
-        self.topic_root = f"/holoocean/agent{num}/"
-        typecount = {}
-        for i, sensor in enumerate(self.cfg['sensors']):
-            if sensor['sensor_type'] not in typecount:
-                typecount[sensor['sensor_type']] = 0
-            else:
-                typecount[sensor['sensor_type']] += 1
-
-            self.cfg['sensors'][i]['topic'] = f"{sensor['sensor_type']}{typecount[sensor['sensor_type']]}"
-            match sensor['sensor_type']:
-                case "RGBCamera":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "ViewportCapture":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "ImagingSonar":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "ProfilingSonar":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Image, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "DVLSensor":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(DVL, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "GPSSensor":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Point, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-                case "DepthSensor":
-                    self.cfg['sensors'][i]['pub'] = self.create_publisher(Float32, self.topic_root + self.cfg['sensors'][i]['topic'], 1)
-
-        # create empty base command
+        # sensors
+        self.topic_root = f"/holoocean/{self.cfg['agent_name']}/"
+        self.sensors = {}
+        self.sensor_topic_mapping = {
+            "RGBCamera": Image,
+            "ViewportCapture": Image,
+            "ImagingSonar": Image,
+            "ProfilingSonar": Image,
+            "DVLSensor": DVL,
+            "GPSSensor": Point,
+            "DepthSensor": Float32
+        }
+        for sensor_cfg in self.cfg['sensors']:
+            self.sensors[sensor_cfg['sensor_name']] = {
+                'pub': self.create_publisher(self.sensor_topic_mapping[sensor_cfg['sensor_type']], f"{self.topic_root}{sensor_cfg['sensor_name']}", 1),
+                'type': sensor_cfg['sensor_type']
+            }
+        
+        # commands
         self.command = np.zeros((8))
         self.command_lock = Lock()
-        
-        # subscribe to control topic
         self.create_subscription(Twist, f"{self.topic_root}cmd_vel", self.command_callback, 1, callback_group=callback_group)
-        self.get_logger().info(f'made subscriber at {self.topic_root}cmd_vel')
 
     def command_callback(self, msg):
         command = np.zeros(8)
@@ -104,37 +95,39 @@ class AgentNode(Node):
         return bridge.cv2_to_imgmsg(arr_uint8, encoding='mono8')
     
     def tick(self, state):
-        # update ros topics
-        for i, (sensor, val) in enumerate(state.items()):
-            new_msg = None
-            match sensor:
+        # topics
+        for (sensor_name, val) in state.items():
+            sensor_type = self.sensors[sensor_name]['type']
+            msg = None
+            match sensor_type:
                 case "RGBCamera":
-                    new_msg = self.camera_to_image(val)
+                    msg = self.camera_to_image(val)
                 case "ViewportCapture":
-                    new_msg = self.camera_to_image(val)
+                    msg = self.camera_to_image(val)
                 case "ImagingSonar":
-                    new_msg = self.sonar_to_image(val)
+                    msg = self.sonar_to_image(val)
                 case "ProfilingSonar":
-                    new_msg = self.sonar_to_image(val)
+                    msg = self.sonar_to_image(val)
                 case "DVLSensor":
-                    new_msg = DVL()
-                    new_msg.velocity_x = float(val[0])
-                    new_msg.velocity_y = float(val[1])
-                    new_msg.velocity_z = float(val[2])
-                    new_msg.range_x_forw = float(val[3])
-                    new_msg.range_y_forw = float(val[4])
-                    new_msg.range_x_back = float(val[5])
-                    new_msg.range_y_back = float(val[6])
+                    msg = DVL()
+                    msg.velocity_x = float(val[0])
+                    msg.velocity_y = float(val[1])
+                    msg.velocity_z = float(val[2])
+                    msg.range_x_forw = float(val[3])
+                    msg.range_y_forw = float(val[4])
+                    msg.range_x_back = float(val[5])
+                    msg.range_y_back = float(val[6])
                 case "GPSSensor":
-                    new_msg = Point()
-                    new_msg.x = val[0]
-                    new_msg.y = val[1]
-                    new_msg.z = val[2]
+                    msg = Point()
+                    msg.x = val[0]
+                    msg.y = val[1]
+                    msg.z = val[2]
                 case "DepthSensor":
-                    new_msg = Float32()
-                    new_msg.data = float(val[0])
-            self.cfg['sensors'][i]['pub'].publish(new_msg)
+                    msg = Float32()
+                    msg.data = float(val[0])
+            self.sensors[sensor_name]['pub'].publish(msg)
         
+        # latest command
         with self.command_lock:
             self.env.act(self.cfg['agent_name'], self.command)
         
@@ -149,22 +142,21 @@ class EnvNode(Node):
         if self.get_parameter('config_path').get_parameter_value().string_value == "":
             raise FileNotFoundError('no config file provided')
         with open(self.get_parameter('config_path').get_parameter_value().string_value) as f:
-            cfg = json.load(f)
-        self.cfg = cfg
+            self.cfg = json.load(f)
         
         # create sim environment
-        self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=True)
+        self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=False)
         # self.env.should_render_viewport(True)
         # self.env.set_render_quality(3)
         self.env.weather.set_fog_density(0.5)
         
-        # create agent nodes
+        # create agent nodes using cfg updated by holoocean
         self.agents = []
-        for i, agent_cfg in enumerate(cfg['agents']):
+        for i, agent_cfg in enumerate(self.cfg['agents']):
             self.agents.append(AgentNode(agent_cfg, i, self.env, agent_callback_group))
         
         # update environment at provided tick rate
-        self.create_timer(1 / cfg['ticks_per_sec'], self.tick)
+        self.create_timer(1 / self.cfg['ticks_per_sec'], self.tick)
 
     def tick(self):
         # one simulation tick
@@ -186,9 +178,6 @@ class EnvNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
-    # with open('config.json') as f:
-    #     cfg = json.load(f)
 
     # make env
     env_node = EnvNode(ReentrantCallbackGroup())

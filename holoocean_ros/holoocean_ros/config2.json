@@ -8,13 +8,13 @@
     "agents": [
         {
             "agent_name": "auv0",
-            "agent_type": "BlueROV2",
+            "agent_type": "HoveringAUV",
             "sensors": [
                 {
                     "sensor_type": "RGBCamera",
                     "sensor_name": "LeftCamera",
                     "socket": "CameraLeftSocket",
-                    "Hz": 5,
+                    "Hz": 30,
                     "configuration": {
                         "CaptureWidth": 512,
                         "CaptureHeight": 512
@@ -22,8 +22,9 @@
                 },
                 {
                     "sensor_type": "RGBCamera",
+                    "sensor_name": "RightCamera",
                     "socket": "CameraRightSocket",
-                    "Hz": 5,
+                    "Hz": 30,
                     "configuration": {
                         "CaptureWidth": 512,
                         "CaptureHeight": 512
