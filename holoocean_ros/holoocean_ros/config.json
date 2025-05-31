@@ -1,0 +1,84 @@
+{
+    "name": "test_rgb_camera",
+    "world": "SimpleUnderwater",
+    "package_name": "Ocean",
+    "main_agent": "auv0",
+    "ticks_per_sec": 60,
+    "frames_per_sec": false,
+    "agents": [
+        {
+            "agent_name": "auv0",
+            "agent_type": "BlueROV2",
+            "sensors": [
+                {
+                    "sensor_type": "RGBCamera",
+                    "name": "cam0",
+                    "socket": "CameraSocket",
+                    "configuration": {
+                        "CaptureWidth": 512,
+                        "CaptureHeight": 512
+                    }
+                },
+                {
+                    "sensor_type": "DepthSensor",
+                    "socket": "DepthSocket",
+                    "Hz": 60,
+                    "configuration": {
+                        "Sigma": 0.255
+                    }
+                },
+                {
+                    "sensor_type": "GPSSensor",
+                    "socket": "IMUSocket",
+                    "Hz": 5,
+                    "configuration":{
+                        "Sigma": 0.5,
+                        "Depth": 1,
+                        "DepthSigma": 0.25
+                    }
+                },
+                {
+                    "sensor_type": "ViewportCapture"
+                },
+                {
+                    "sensor_type": "ImagingSonar",
+                    "socket": "SonarSocket",
+                    "octree_min": 3,
+                    "octree_max": 4,
+                    "Hz": 5,
+                    "configuration": {
+                        "RangeBins": 256,
+                        "AzimuthBins": 256,
+                        "RangeMin": 1,
+                        "RangeMax": 10,
+                        "InitOctreeRange": 500,
+                        "Elevation": 20,
+                        "Azimuth": 120,
+                        "AzimuthStreaks": -1,
+                        "ScaleNoise": true,
+                        "AddSigma": 0.15,
+                        "MultSigma": 0.2,
+                        "RangeSigma": 0.1,
+                        "MultiPath": true
+                    }
+                },
+                {
+                    "sensor_type": "DVLSensor",
+                    "socket": "DVLSocket",
+                    "Hz": 20,
+                    "configuration": {
+                        "Elevation": 22.5,
+                        "DebugLines": false,
+                        "VelSigma": 0.02626,
+                        "ReturnRange": true,
+                        "MaxRange": 50,
+                        "RangeSigma": 0.1
+                    }
+                }
+            ],
+            "control_scheme": 0,
+            "location": [0, 0, -30],
+            "rotation": [0.0, 0.0, 135.0]
+        }
+    ]
+}

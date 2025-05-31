@@ -16,92 +16,14 @@ from threading import Lock
 from rclpy.qos import QoSPresetProfiles
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 from holoocean_msgs.msg import DVL # type: ignore
+import json
 
-test_cfg = {
-    "name": "test_rgb_camera",
-    "world": "SimpleUnderwater",
-    "package_name": "Ocean",
-    "main_agent": "auv0",
-    "ticks_per_sec": 60,
-    "frames_per_sec": False,
-    "agents": [
-        {
-            "agent_name": "auv0",
-            "agent_type": "BlueROV2",
-            "sensors": [
-                {
-                    "sensor_type": "RGBCamera",
-                    "name": "cam0",
-                    "socket": "CameraSocket",
-                    "configuration": {
-                        "CaptureWidth": 512,
-                        "CaptureHeight": 512
-                    }
-                },
-                {
-                    "sensor_type": "DepthSensor",
-                    "socket": "DepthSocket",
-                    "Hz": 60,
-                    "configuration": {
-                        "Sigma": 0.255
-                    }
-                },
-                # {
-                #     "sensor_type": "GPSSensor",
-                #     "socket": "IMUSocket",
-                #     "Hz": 5,
-                #     "configuration":{
-                #         "Sigma": 0.5,
-                #         "Depth": 1,
-                #         "DepthSigma": 0.25
-                #     }
-                # },
-                # {
-                #     "sensor_type": "ViewportCapture"
-                # },
-                # {
-                #     "sensor_type": "ProfilingSonar",
-                #     "socket": "SonarSocket",
-                #     "octree_min": 3,
-                #     "octree_max": 4,
-                #     "Hz": 5,
-                #     "configuration": {
-                #         "RangeBins": 256,
-                #         "AzimuthBins": 256,
-                #         "RangeMin": 1,
-                #         "RangeMax": 10,
-                #         "InitOctreeRange": 500,
-                #         "Elevation": 20,
-                #         "Azimuth": 120,
-                #         "AzimuthStreaks": -1,
-                #         "ScaleNoise": True,
-                #         "AddSigma": 0.15,
-                #         "MultSigma": 0.2,
-                #         "RangeSigma": 0.1,
-                #         "MultiPath": True
-                #     }
-                # }
-                # {
-                #     "sensor_type": "DVLSensor",
-                #     "socket": "DVLSocket",
-                #     "Hz": 20,
-                #     "configuration": {
-                #         "Elevation": 22.5,
-                #         "DebugLines": False,
-                #         "VelSigma": 0.02626,
-                #         "ReturnRange": True,
-                #         "MaxRange": 50,
-                #         "RangeSigma": 0.1
-                #     }
-                # },
-            ],
-            "control_scheme": 0,
-            # "location": [486.0, -632.0, -12.0],
-            "location": [0, 0, -30],
-            "rotation": [0.0, 0.0, 135.0]
-        },
-    ]
-}
+# TODO
+# multiagent support
+# launchfiles and config options
+# migeran compatibility
+
+
 
 class AgentNode(Node):
     def __init__(self, cfg, num, env, callback_group):
@@ -183,7 +105,6 @@ class AgentNode(Node):
     
     def tick(self, state):
         # update ros topics
-        print(state.keys())
         for i, (sensor, val) in enumerate(state.items()):
             new_msg = None
             match sensor:
@@ -212,7 +133,6 @@ class AgentNode(Node):
                 case "DepthSensor":
                     new_msg = Float32()
                     new_msg.data = float(val[0])
-                    print(val[0])
             self.cfg['sensors'][i]['pub'].publish(new_msg)
         
         with self.command_lock:
@@ -220,9 +140,17 @@ class AgentNode(Node):
         
 
 class EnvNode(Node):
-    def __init__(self, cfg, agent_callback_group):
-        self.cfg = cfg
+    def __init__(self, agent_callback_group):
         super().__init__(f"holoocean_driver")
+
+        self.declare_parameter('config_path', "")
+
+        # load config json
+        if self.get_parameter('config_path').get_parameter_value().string_value == "":
+            raise FileNotFoundError('no config file provided')
+        with open(self.get_parameter('config_path').get_parameter_value().string_value) as f:
+            cfg = json.load(f)
+        self.cfg = cfg
         
         # create sim environment
         self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=True)
@@ -259,8 +187,11 @@ class EnvNode(Node):
 def main(args=None):
     rclpy.init(args=args)
 
+    # with open('config.json') as f:
+    #     cfg = json.load(f)
+
     # make env
-    env_node = EnvNode(test_cfg, ReentrantCallbackGroup())
+    env_node = EnvNode(ReentrantCallbackGroup())
 
     # add agents to shared executor
     executor = MultiThreadedExecutor(num_threads=len(env_node.agents) + 1)
