@@ -19,7 +19,6 @@ from holoocean_msgs.msg import DVL # type: ignore
 import json
 
 # TODO
-# sensor naming rework
 # multiagent support
 # launchfiles and config options
 # migeran compatibility
