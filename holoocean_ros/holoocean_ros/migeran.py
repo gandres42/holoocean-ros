@@ -11,21 +11,26 @@ import matplotlib.pyplot as plt
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 
-with open("/home/gavin/Git/holoocean_ws/src/holoocean/holoocean_ros/holoocean_ros/config2.json") as f:
-    config = json.load(f)
-config = config['agents'][0]['sensors'][-1]["configuration"]
-azi = config['Azimuth']
-minR = config['RangeMin']
-maxR = config['RangeMax']
-binsR = config['RangeBins']
-binsA = config['AzimuthBins']
 
-SONAR_THRESH = 100
+
 
 class Migeran(Node):
     def __init__(self):
         super().__init__('minimal_node')
-        # with open(self.get_parameter('config_path').get_parameter_value().string_value) as f:
+        self.declare_parameter('intensity_threshold', 100)
+        self.declare_parameter('config_path', "")
+
+        if self.get_parameter('config_path').get_parameter_value().string_value == "":
+            raise FileNotFoundError('no config file provided')
+        with open(self.get_parameter('config_path').get_parameter_value().string_value) as f:
+            config = json.load(f)
+        
+        config = config['agents'][0]['sensors'][-1]["configuration"]
+        self.azi = config['Azimuth']
+        self.minR = config['RangeMin']
+        self.maxR = config['RangeMax']
+        self.binsR = config['RangeBins']
+        self.binsA = config['AzimuthBins']
 
         self.bridge = CvBridge()
         self.create_subscription(Image, '/holoocean/auv0/ImagingSonar', self.sonar_cb, 1)
@@ -42,11 +47,11 @@ class Migeran(Node):
 
             for r in range(img.shape[0]):
                 for c in range(img.shape[1]):
-                    if img[r, c] < SONAR_THRESH:
+                    if img[r, c] < self.get_parameter('intensity_threshold').get_parameter_value().integer_value:
                         continue
 
-                    current_distance = (r * (maxR - minR)) / img.shape[0] + minR
-                    current_angle = (azi / 2) - ((azi * c) / img.shape[1])
+                    current_distance = (r * (self.maxR - self.minR)) / img.shape[0] + self.minR
+                    current_angle = (self.azi / 2) - ((self.azi * c) / img.shape[1])
                     theta = current_angle * (np.pi / 180)
 
                     point_vector = np.array([current_distance, 0.0, 0.0])

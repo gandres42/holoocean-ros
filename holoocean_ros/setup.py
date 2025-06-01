@@ -21,6 +21,7 @@ setup(
         'console_scripts': [
             'sim = holoocean_ros.sim:main',
             'manual = holoocean_ros.manual:main',
+            'migeran = holoocean_ros.migeran:main',
         ],
     },
 )
