@@ -12,6 +12,7 @@
             "sensors": [
                 {
                     "sensor_type": "ImagingSonar",
+                    "sensor_name": "ImagingSonar",
                     "socket": "SonarSocket",
                     "octree_min": 3,
                     "octree_max": 4,
@@ -31,6 +32,9 @@
                         "RangeSigma": 0.1,
                         "MultiPath": true
                     }
+                },
+                {
+                    "sensor_type": "ViewportCapture"
                 }
             ],
             "control_scheme": 0,

@@ -21,7 +21,6 @@ import json
 # TODO
 # multiagent support
 # launchfiles and config options
-# migeran compatibility
 
 class ConfigurationError(Exception):
     def __init__(self, message):

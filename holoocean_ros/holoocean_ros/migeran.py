@@ -17,15 +17,28 @@ from std_msgs.msg import Header
 class Migeran(Node):
     def __init__(self):
         super().__init__('minimal_node')
-        self.declare_parameter('intensity_threshold', 100)
+        self.declare_parameter('intensity_threshold', 85)
         self.declare_parameter('config_path', "")
+        self.declare_parameter('agent_name', "auv0")
+        self.declare_parameter('sensor_name', "ImagingSonar")
 
         if self.get_parameter('config_path').get_parameter_value().string_value == "":
             raise FileNotFoundError('no config file provided')
         with open(self.get_parameter('config_path').get_parameter_value().string_value) as f:
             config = json.load(f)
         
-        config = config['agents'][0]['sensors'][-1]["configuration"]
+        base_config = {}
+        for agent in config['agents']:
+            if agent['agent_name'] == self.get_parameter('agent_name').get_parameter_value().string_value:
+                for sensor in agent['sensors']:
+                    if 'sensor_name' in sensor.keys():
+                        if sensor['sensor_name'] == self.get_parameter('sensor_name').get_parameter_value().string_value:
+                            base_config = sensor['configuration']
+                        
+
+
+        # config = config['agents'][0]['sensors'][0]["configuration"]
+        config = base_config
         self.azi = config['Azimuth']
         self.minR = config['RangeMin']
         self.maxR = config['RangeMax']
