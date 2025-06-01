@@ -21,6 +21,7 @@ import json
 # TODO
 # torpedo controls and improved control accuracy
 # launchfiles and config options
+# USB controller node
 
 class ConfigurationError(Exception):
     def __init__(self, message):
