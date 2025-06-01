@@ -1,13 +1,10 @@
 import rclpy
-import rclpy.clock
 from rclpy.node import Node
 from sensor_msgs.msg import Image, PointCloud2
 from cv_bridge import CvBridge
-import cv2
 import json
 from scipy.spatial.transform import Rotation as R
 import numpy as np
-import matplotlib.pyplot as plt
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 
