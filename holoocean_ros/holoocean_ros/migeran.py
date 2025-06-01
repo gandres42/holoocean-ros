@@ -8,15 +8,13 @@ import numpy as np
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 
-
-
-
 class Migeran(Node):
     def __init__(self):
         super().__init__('minimal_node')
         self.declare_parameter('intensity_threshold', 85)
         self.declare_parameter('config_path', "")
         self.declare_parameter('agent_name', "auv0")
+        self.declare_parameter('frame_id', "map")
         self.declare_parameter('sensor_name', "ImagingSonar")
 
         if self.get_parameter('config_path').get_parameter_value().string_value == "":
@@ -31,10 +29,7 @@ class Migeran(Node):
                     if 'sensor_name' in sensor.keys():
                         if sensor['sensor_name'] == self.get_parameter('sensor_name').get_parameter_value().string_value:
                             base_config = sensor['configuration']
-                        
-
-
-        # config = config['agents'][0]['sensors'][0]["configuration"]
+        
         config = base_config
         self.azi = config['Azimuth']
         self.minR = config['RangeMin']
@@ -49,10 +44,6 @@ class Migeran(Node):
     def sonar_cb(self, msg):
         try:
             img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='mono8')
-            h, w = img.shape
-            center = (w // 2, h // 2)
-            max_radius = np.sqrt((w / 2)**2 + (h / 2)**2)
-
             points = []
 
             for r in range(img.shape[0]):
@@ -71,14 +62,10 @@ class Migeran(Node):
                     points.append(point_vector)
             points = np.array(points)
             header = Header()
-            # header.stamp = self.get_clock().
-            header.frame_id = "map"
+            header.frame_id = self.get_parameter('frame_id').get_parameter_value().string_value
             self.cloud_pub.publish(point_cloud2.create_cloud_xyz32(header, points))
-            
-
         except Exception as e:
             self.get_logger().error(f'Image conversion error: {e}')
-        
 
 
 def main(args=None):

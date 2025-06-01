@@ -19,7 +19,7 @@ from holoocean_msgs.msg import DVL # type: ignore
 import json
 
 # TODO
-# multiagent support
+# torpedo controls and improved control accuracy
 # launchfiles and config options
 
 class ConfigurationError(Exception):
@@ -181,7 +181,8 @@ def main(args=None):
     env_node = EnvNode(ReentrantCallbackGroup())
 
     # add agents to shared executor
-    executor = MultiThreadedExecutor(num_threads=len(env_node.agents) + 1)
+    # executor = MultiThreadedExecutor(num_threads=len(env_node.agents) + 1)
+    executor = MultiThreadedExecutor()
     for agent in env_node.agents:
         executor.add_node(agent)
 
