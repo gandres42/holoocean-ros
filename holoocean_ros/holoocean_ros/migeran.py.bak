@@ -1,15 +1,12 @@
 import rclpy
-import rclpy.clock
 from rclpy.node import Node
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import json
-from scipy.spatial.transform import Rotation as R
 import numpy as np
 import matplotlib.pyplot as plt
-from sensor_msgs_py import point_cloud2
-from std_msgs.msg import Header
+import imghdr
 
 with open("/home/gavin/Git/holoocean_ws/src/holoocean/holoocean_ros/holoocean_ros/config2.json") as f:
     config = json.load(f)
@@ -20,16 +17,30 @@ maxR = config['RangeMax']
 binsR = config['RangeBins']
 binsA = config['AzimuthBins']
 
-SONAR_THRESH = 100
-
 class Migeran(Node):
     def __init__(self):
         super().__init__('minimal_node')
         # with open(self.get_parameter('config_path').get_parameter_value().string_value) as f:
 
+        plt.ion()
+        self.fig, ax = plt.subplots(subplot_kw=dict(projection='polar'), figsize=(8,5))
+        ax.set_theta_zero_location("N") # type: ignore
+        ax.set_thetamin(-azi/2) # type: ignore
+        ax.set_thetamax(azi/2) # type: ignore
+
+        theta = np.linspace(-azi/2, azi/2, binsA)*np.pi/180
+        r = np.linspace(minR, maxR, binsR)
+        T, R = np.meshgrid(theta, r)
+        z = np.zeros_like(T)
+
+        plt.grid(False)
+        self.plot = ax.pcolormesh(T, R, z, cmap='gray', shading='auto', vmin=0, vmax=255)
+        plt.tight_layout()
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+
         self.bridge = CvBridge()
         self.create_subscription(Image, '/holoocean/auv0/ImagingSonar', self.sonar_cb, 1)
-        self.cloud_pub = self.create_publisher(PointCloud2, '/holoocean/auv0/SonarPoints', 10)
 
     def sonar_cb(self, msg):
         try:
@@ -38,29 +49,17 @@ class Migeran(Node):
             center = (w // 2, h // 2)
             max_radius = np.sqrt((w / 2)**2 + (h / 2)**2)
 
-            points = []
+            # Convert to polar coordinates
+            polar_img = cv2.warpPolar(img, (w, int(max_radius)), center, max_radius, cv2.WARP_POLAR_LINEAR)
 
-            for r in range(img.shape[0]):
-                for c in range(img.shape[1]):
-                    if img[r, c] < SONAR_THRESH:
-                        continue
+            # Optional: rotate 90 degrees to match typical sonar formats
+            polar_img = cv2.rotate(polar_img, cv2.ROTATE_90_CLOCKWISE)
 
-                    current_distance = (r * (maxR - minR)) / img.shape[0] + minR
-                    current_angle = (azi / 2) - ((azi * c) / img.shape[1])
-                    theta = current_angle * (np.pi / 180)
+            cv2.imwrite('polar_image.png', polar_img)
+            # self.plot.set_array(cv_image)
 
-                    point_vector = np.array([current_distance, 0.0, 0.0])
-
-                    point_vector = point_vector @ R.from_euler('xyz', [0, 0, theta]).as_matrix()
-                    point_vector[1] *= -1
-                    points.append(point_vector)
-            points = np.array(points)
-            header = Header()
-            # header.stamp = self.get_clock().
-            header.frame_id = "map"
-            self.cloud_pub.publish(point_cloud2.create_cloud_xyz32(header, points))
-            
-
+            # self.fig.canvas.draw()
+            # self.fig.canvas.flush_events()
         except Exception as e:
             self.get_logger().error(f'Image conversion error: {e}')
         
