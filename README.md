@@ -38,7 +38,7 @@ where `config_path` is the filepath of a valid configuration json file.  Configu
 
 To run a single agent in the SimpleUnderwater environment, run
 ```
-ros2 run holoocean_ros sim --ros-args -p config_path:=./src/holoocean_ros/holoocean_ros/configs/config_demo.json
+ros2 run holoocean_ros sim --ros-args -p config_path:=./src/holoocean-ros/holoocean_ros/configs/config_demo.json
 ```
 
 ## Manually Controlling
