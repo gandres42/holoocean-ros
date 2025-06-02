@@ -47,8 +47,9 @@ class KeyboardListener:
 class ControlNode(Node):
     def __init__(self, agent_num):
         super().__init__('holoocean_controller')
+        self.declare_parameter('agent_name', 'auv0')
         self.control_timer = self.create_timer(1/60, self.control_timer_callback)
-        self.cmdvel_pub = self.create_publisher(Twist, f"/holoocean/auv0/cmd_vel", 1)
+        self.cmdvel_pub = self.create_publisher(Twist, f"/holoocean/{self.get_parameter('agent_name').get_parameter_value().string_value}/cmd_vel", 1)
         self.listener = KeyboardListener()
 
     def control_timer_callback(self):
