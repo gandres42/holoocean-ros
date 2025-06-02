@@ -1,7 +1,7 @@
 A Holoocean ROS2 wrapper built using the python API with multiagent support
 
 ## Setup
-1. Install holoocean using directions from the main repo
+1. Install holoocean python client using directions from the main repo
 
 2. Install requirements
 ```
