@@ -2,13 +2,20 @@ A Holoocean ROS2 wrapper built using the python API with multiagent support
 
 ## Setup
 1. Install holoocean using directions from the main repo
-2. Create a ros workspace
+
+2. Install requirements
+```
+pip install -r r requirements.txt
+```
+Note that if using Holoocean 1.0.0 or earlier numpy must be version 1.26.4 or lower.
+
+3. Create a ros workspace
 ```
 mkdir holoocean_ws
 cd holoocean_ws
 ```
 
-3. Clone holoocean-ros
+4. Clone holoocean-ros
 ```
 mkdir src
 cd src
@@ -16,7 +23,7 @@ git clone https://github.com/gandres42/holoocean-ros.git
 cd ..
 ```
 
-4. Build and source the project
+5. Build and source the project
 ```
 colcon build
 source install/setup.bash
