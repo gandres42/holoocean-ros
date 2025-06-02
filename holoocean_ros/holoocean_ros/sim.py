@@ -19,9 +19,8 @@ from holoocean_msgs.msg import DVL # type: ignore
 import json
 
 # TODO
-# torpedo controls and improved control accuracy
 # launchfiles and config options
-# USB controller node
+# USB gamepad node
 
 class ConfigurationError(Exception):
     def __init__(self, message):
@@ -56,30 +55,64 @@ class AgentNode(Node):
             }
         
         # commands
-        self.command = np.zeros((8))
+        print(self.cfg['agent_type'])
+        if self.cfg['agent_type'] in ['HoveringAUV', 'BlueROV2']:
+            self.command = np.zeros((8))
+        elif self.cfg['agent_type'] in ['TorpedoAUV']:
+            self.command = np.zeros((5))
+        elif self.cfg['agent_type'] in ['SurfaceVessel']:
+            self.command = np.zeros((2))
         self.command_lock = Lock()
         self.create_subscription(Twist, f"{self.topic_root}cmd_vel", self.command_callback, 1, callback_group=callback_group)
 
     def command_callback(self, msg):
-        command = np.zeros(8)
-        
-        # UP/DOWN
-        command[0:4] += msg.linear.z
+        if self.cfg['agent_type'] in ['HoveringAUV', 'BlueROV2']:
+            command = np.zeros(8)
+            
+            # UP/DOWN
+            command[0:4] += msg.linear.z * 10.0
 
-        # YAW
-        command[[4,7]] -= msg.angular.z
-        command[[5,6]] += msg.angular.z
+            # YAW
+            command[[4,7]] -= msg.angular.z * 10.0
+            command[[5,6]] += msg.angular.z * 10.0
 
-        # FORWARD/BACKWARD
-        command[4:8] += msg.linear.y
+            # FORWARD/BACKWARD
+            command[4:8] += msg.linear.y * 10.0
 
-        # STRAFE LEFT
-        command[[4,6]] -= msg.linear.x
-        command[[5,7]] += msg.linear.x
-        
-        with self.command_lock:
-            self.command = command
-        
+            # STRAFE LEFT
+            command[[4,6]] -= msg.linear.x * 10.0
+            command[[5,7]] += msg.linear.x * 10.0
+            with self.command_lock:
+                self.command = command
+        elif self.cfg['agent_type'] in ['TorpedoAUV']:
+            command = np.zeros(5)
+            # [left_fin, top_fin, right_fin, bottom_fin, thrust]
+            
+            # FORWARD
+            command[4] = msg.linear.y * 100.0
+
+            # YAW
+            command[1] = -100.0 * msg.linear.x
+            command[3] = 100.0 * msg.linear.x
+
+            # ROLL
+            command[0] = 100.0 * msg.linear.z
+            command[2] = 100.0 * -msg.linear.z
+
+            with self.command_lock:
+                self.command = command
+        elif self.cfg['agent_type'] in ['SurfaceVessel']:
+            command = np.zeros(2)
+            # [left thruster, right thruster]
+            command[0] = msg.linear.y * 10000.0
+            command[1] = msg.linear.y * 10000.0
+
+            if msg.angular.z != 0:
+                command[0] *= msg.angular.z
+                command[1] *= -msg.angular.z
+
+            with self.command_lock:
+                self.command = command
     def camera_to_image(self, np_img: np.ndarray, frame_id: str = "camera") -> Image:
         msg = self.bridge.cv2_to_imgmsg(np_img, encoding='bgra8')
         msg.header = Header()
@@ -144,7 +177,7 @@ class EnvNode(Node):
             self.cfg = json.load(f)
         
         # create sim environment
-        self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=False)
+        self.env = holoocean.make(scenario_cfg=self.cfg, show_viewport=True, verbose=True)
         # self.env.should_render_viewport(True)
         # self.env.set_render_quality(3)
         self.env.weather.set_fog_density(0.5)

@@ -48,7 +48,7 @@ class ControlNode(Node):
     def __init__(self, agent_num):
         super().__init__('holoocean_controller')
         self.control_timer = self.create_timer(1/60, self.control_timer_callback)
-        self.cmdvel_pub = self.create_publisher(Twist, f"/holoocean/auv1/cmd_vel", 1)
+        self.cmdvel_pub = self.create_publisher(Twist, f"/holoocean/auv0/cmd_vel", 1)
         self.listener = KeyboardListener()
 
     def control_timer_callback(self):
@@ -56,21 +56,21 @@ class ControlNode(Node):
         cmd_lin = Vector3()
         cmd_ang = Vector3()
         if cmd['w']:
-            cmd_lin.y = 10.0
+            cmd_lin.y = 1.0
         if cmd['s']:
-            cmd_lin.y = -10.0
+            cmd_lin.y = -1.0
         if cmd['a']:
-            cmd_lin.x = -10.0
+            cmd_lin.x = -1.0
         if cmd['d']:
-            cmd_lin.x = 10.0
+            cmd_lin.x = 1.0
         if cmd['i']:
-            cmd_lin.z = 10.0
+            cmd_lin.z = 1.0
         if cmd['j']:
-            cmd_ang.z = -10.0
+            cmd_ang.z = -1.0
         if cmd['k']:
-            cmd_lin.z = -10.0
+            cmd_lin.z = -1.0
         if cmd['l']:
-            cmd_ang.z = 10.0
+            cmd_ang.z = 1.0
         
         cmd_vel = Twist()
         cmd_vel.linear = cmd_lin

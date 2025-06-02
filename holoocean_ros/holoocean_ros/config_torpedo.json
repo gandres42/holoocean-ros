@@ -1,0 +1,26 @@
+{
+    "name": "test_rgb_camera",
+    "world": "SimpleUnderwater",
+    "package_name": "Ocean",
+    "main_agent": "auv0",
+    "ticks_per_sec": 60,
+    "agents": [
+        {
+            "agent_name": "auv0",
+            "agent_type": "SurfaceVessel",
+            "sensors": [
+                {
+                    "sensor_type": "RGBCamera",
+                    "name": "cam0",
+                    "socket": "CameraSocket",
+                    "configuration": {
+                        "CaptureWidth": 512,
+                        "CaptureHeight": 512
+                    }
+                }
+            ],
+            "control_scheme": 0,
+            "location": [0, 0, -5]
+        }
+    ]
+}
