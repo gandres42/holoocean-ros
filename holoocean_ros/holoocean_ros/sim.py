@@ -3,18 +3,13 @@ import rclpy
 from rclpy.node import Node
 import holoocean
 import numpy as np
-from pynput import keyboard
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Float32
 from cv_bridge import CvBridge
-from copy import deepcopy
 from geometry_msgs.msg import Twist, Point
-import time
 from rclpy.executors import MultiThreadedExecutor
-from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
+from rclpy.callback_groups import ReentrantCallbackGroup
 from threading import Lock
-from rclpy.qos import QoSPresetProfiles
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 from holoocean_msgs.msg import DVL # type: ignore
 import json
 
