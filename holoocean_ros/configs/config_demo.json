@@ -13,7 +13,7 @@
                 {
                     "sensor_type": "RGBCamera",
                     "name": "cam0",
-                    "socket": "CameraSocket",
+                    "socket": "CameraLeftSocket",
                     "configuration": {
                         "CaptureWidth": 512,
                         "CaptureHeight": 512
